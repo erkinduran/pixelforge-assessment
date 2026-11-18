@@ -5,7 +5,8 @@ use App\Http\Controllers\GenerationController;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+// The kit's welcome page is gone: the home page is the generate form. A guest is sent on to login by `auth`.
+Route::redirect('/', '/generations/create')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');

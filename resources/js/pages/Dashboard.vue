@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import { create, index } from '@/routes/generations';
@@ -20,9 +20,12 @@ defineOptions({
 <template>
     <Head title="Dashboard" />
 
-    <div
-        class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-    >
+    <div class="mx-auto flex w-full max-w-2xl flex-col gap-6 p-4">
+        <Heading
+            title="Dashboard"
+            description="Generate an image and see what it costs, or look at your earlier generations."
+        />
+
         <div class="flex flex-wrap gap-3">
             <Button as-child>
                 <Link :href="create()">Generate an image</Link>
@@ -30,28 +33,6 @@ defineOptions({
             <Button variant="outline" as-child>
                 <Link :href="index()">View history</Link>
             </Button>
-        </div>
-        <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-            <div
-                class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"
-            >
-                <PlaceholderPattern />
-            </div>
-        </div>
-        <div
-            class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border"
-        >
-            <PlaceholderPattern />
         </div>
     </div>
 </template>
