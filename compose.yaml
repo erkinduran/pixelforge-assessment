@@ -4,6 +4,9 @@ name: pixelforge
 
 x-app: &app
     image: pixelforge-app:${IMAGE_TAG:?set IMAGE_TAG in .env}
+    # The image is loaded onto the host (docker load); it is never built here and never pulled:
+    # `pixelforge-app` is not a registry image, and a missing tag must be an error.
+    pull_policy: never
     env_file: .env
     restart: unless-stopped
     depends_on:

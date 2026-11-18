@@ -25,7 +25,16 @@ jobs:
           persist-credentials: false
 
       - name: Build the image (linux/amd64)
-        run: docker build --platform linux/amd64 -t pixelforge-app:ci .
+        run: docker build --platform linux/amd64 -t pixelforge-app:ci -t "pixelforge-app:${GITHUB_SHA::7}" .
+
+      - name: Record the image tag and ID
+        run: |
+          docker image ls pixelforge-app
+          {
+            echo "commit=$GITHUB_SHA"
+            echo "tag=${GITHUB_SHA::7}"
+            echo "image_id=$(docker image inspect --format '{{.Id}}' pixelforge-app:ci)"
+          } | tee image-id.txt
 
       - name: Check that the image has no .env and no webhook secret
         run: |
@@ -108,11 +117,13 @@ jobs:
         run: docker compose down
 
       - name: Save the image
-        run: docker save pixelforge-app:ci -o pixelforge-app.tar
+        run: docker save pixelforge-app:ci "pixelforge-app:${GITHUB_SHA::7}" -o pixelforge-app.tar
 
       - name: Upload the image
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pixelforge-app-image
-          path: pixelforge-app.tar
+          path: |
+            pixelforge-app.tar
+            image-id.txt
           retention-days: 7
