@@ -105,6 +105,14 @@ jobs:
             [ "$code" = "200" ] || exit 1
           done
 
+      - name: Worker and scheduler have no inherited healthcheck
+        run: |
+          for s in worker scheduler; do
+            state=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$(docker compose ps -q $s)")
+            echo "$s: $state"
+            [ "$state" = "none" ] || exit 1
+          done
+
       - name: Memory use of the containers
         run: docker stats --no-stream
 

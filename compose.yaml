@@ -37,6 +37,10 @@ services:
         # The submit job limits itself with retryUntil(), so --tries does not matter. --max-time
         # makes the worker exit hourly; restart: unless-stopped brings it back with fresh memory.
         command: php artisan queue:work --sleep=1 --tries=1 --max-time=3600
+        # The image's own healthcheck asks the web server's admin endpoint, which this process does not
+        # run: it would report "unhealthy" forever. The web service sets its own check.
+        healthcheck:
+            disable: true
         mem_limit: 192m
         memswap_limit: 192m
 
@@ -44,6 +48,8 @@ services:
         <<: *app
         # Runs `pixelforge:reconcile` every minute (routes/console.php).
         command: php artisan schedule:work
+        healthcheck:
+            disable: true
         mem_limit: 128m
         memswap_limit: 128m
 
