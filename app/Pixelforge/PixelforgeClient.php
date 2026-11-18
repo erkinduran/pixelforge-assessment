@@ -49,6 +49,19 @@ class PixelforgeClient
     }
 
     /**
+     * GET /generations: our generations, newest first, one page at a time (docs: limit 1 to 100).
+     * The items are full generation objects, so `metadata.local_id` is on each of them.
+     *
+     * @return array<string, mixed> `data` (the items), `has_more` and `next_cursor`
+     */
+    public function listGenerations(?string $cursor = null, int $limit = 100): array
+    {
+        $query = array_filter(['limit' => $limit, 'cursor' => $cursor], fn ($value) => $value !== null);
+
+        return $this->decode($this->send(fn (PendingRequest $request) => $request->get('/generations', $query)));
+    }
+
+    /**
      * GET /pricing. Docs: needs no authentication, so the bearer token is not sent.
      *
      * @return array<string, mixed>

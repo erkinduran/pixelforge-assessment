@@ -6,7 +6,6 @@ use App\Generations\RecordSubmitFailure;
 use App\Generations\SubmitGeneration;
 use App\Models\Charge;
 use App\Models\Generation;
-use App\Support\InvalidMoneyException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -367,14 +366,18 @@ class SubmitGenerationTest extends TestCase
         $object = $this->queuedObject($generation);
         $object['rates']['output_tokens'] = '40.12345'; // 5 decimals: Rates refuses it
         Http::fake(['*/generations' => Http::response($object, 202)]);
+        Log::spy();
 
-        try {
-            $this->attempt(new SubmitGeneration($generation->id));
-            $this->fail('apply() should have thrown');
-        } catch (InvalidMoneyException) {
-            // expected: the queue would retry with its backoff
-        }
+        // No exception reaches the queue: the error is permanent, so a queue retry would only
+        // replay the POST. The job ends normally and is not released.
+        $fake = $this->attempt(new SubmitGeneration($generation->id));
 
+        $this->assertFalse($fake->isReleased());
+        $this->assertFalse($fake->hasFailed());
+        Http::assertSentCount(1);
+        Log::shouldHaveReceived('error')
+            ->withArgs(fn (string $message) => str_contains($message, $generation->id) && str_contains($message, 'decimal'))
+            ->once();
         $row = $generation->fresh();
         $this->assertSame('queued', $row->status);
         $this->assertNull($row->pixelforge_id); // the apply transaction rolled back

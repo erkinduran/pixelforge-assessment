@@ -7,6 +7,7 @@ use App\Pixelforge\Decision;
 use App\Pixelforge\PixelforgeClient;
 use App\Pixelforge\PixelforgeException;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,7 @@ use Throwable;
  * ticket), which dispatches this job again: same key, same body. A row that has a pixelforge_id
  * is polled with GET /generations/{id} instead. There is no "stuck" status.
  */
-class SubmitGeneration implements ShouldQueue
+class SubmitGeneration implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -38,6 +39,22 @@ class SubmitGeneration implements ShouldQueue
     public function __construct(public readonly string $generationId)
     {
         $this->dispatchedAt = now();
+    }
+
+    /**
+     * One live job per generation. The lock is taken at dispatch and released when the job ends
+     * (not while it is only released back to the queue), so the controller and the reconcile
+     * command cannot queue a second one while the first is alive. The lock expires with the
+     * job's own time limit, so a job that was lost (a wiped queue) frees the row again.
+     */
+    public function uniqueId(): string
+    {
+        return $this->generationId;
+    }
+
+    public function uniqueFor(): int
+    {
+        return SubmitPolicy::WAIT_BUDGET_SECONDS + 300;
     }
 
     /** The queue stops this dispatch after the wait budget plus a margin for the attempts. */
@@ -84,11 +101,12 @@ class SubmitGeneration implements ShouldQueue
             $apply->apply($created['generation']);
         } catch (Throwable $e) {
             // Pixelforge created the generation but we could not store its answer. Never write
-            // `failed` for this row: the poller or a webhook will finish it.
+            // `failed` for this row: the poller or a webhook will finish it. Do NOT rethrow: this
+            // is a permanent error (the same answer would fail again), and every queue retry would
+            // replay the whole POST. Logged at error level so it is seen.
             $this->markUnknownOutcome($generation);
             Generation::query()->whereKey($generation->id)->update(['last_submit_error' => 'apply_failed']);
-
-            throw $e;
+            Log::error("SubmitGeneration for {$generation->id}: Pixelforge created it but its answer could not be stored: {$e->getMessage()}");
         }
     }
 

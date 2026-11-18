@@ -78,6 +78,23 @@ class PixelforgeClientTest extends TestCase
         }
     }
 
+    public function test_list_generations_sends_limit_and_cursor_with_auth(): void
+    {
+        Http::fake(['*/generations*' => Http::response(['object' => 'list', 'data' => [], 'has_more' => false, 'next_cursor' => null], 200)]);
+        $client = new PixelforgeClient;
+
+        $client->listGenerations();
+        $client->listGenerations('CUR', 50);
+
+        $queries = Http::recorded()->map(function (array $pair) {
+            parse_str((string) parse_url($pair[0]->url(), PHP_URL_QUERY), $query);
+
+            return $query;
+        })->values()->all();
+        $this->assertSame([['limit' => '100'], ['limit' => '50', 'cursor' => 'CUR']], $queries);
+        Http::assertSent(fn (Request $request) => $request->method() === 'GET' && $request->hasHeader('Authorization'));
+    }
+
     public function test_get_generation_requests_the_id_with_auth(): void
     {
         Http::fake(['*/generations/gen_TEST' => Http::response($this->generation('succeeded'), 200)]);
