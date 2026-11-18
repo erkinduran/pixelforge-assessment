@@ -30,13 +30,14 @@ class EmailVerificationTest extends TestCase
         $response->assertOk();
     }
 
-    public function test_unverified_users_are_redirected_to_the_email_verification_prompt(): void
+    public function test_unverified_users_can_use_the_app_without_verifying(): void
     {
+        // Email verification is not required: the deployed app has no mail server.
         $user = User::factory()->unverified()->create();
 
         $response = $this->actingAs($user)->get(route('appearance.edit'));
 
-        $response->assertRedirect(route('verification.notice'));
+        $response->assertOk();
     }
 
     public function test_email_can_be_verified()
