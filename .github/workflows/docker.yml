@@ -1,0 +1,118 @@
+name: docker
+
+# Builds the production image and starts the whole compose stack once with throwaway settings,
+# so a broken Dockerfile or compose.yaml shows up here and not on the server. No secrets are used:
+# every value in the .env below is made up inside this job.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the image (linux/amd64)
+        run: docker build --platform linux/amd64 -t pixelforge-app:ci .
+
+      - name: Check that the image has no .env and no webhook secret
+        run: |
+          docker run --rm --entrypoint sh pixelforge-app:ci -c 'test ! -e /var/www/html/.env'
+          if docker run --rm --entrypoint sh pixelforge-app:ci -c 'grep -rl whsec_ /var/www/html'; then
+            echo "A whsec_ value is inside the image"
+            exit 1
+          fi
+
+      - name: Write a throwaway .env
+        run: |
+          APP_KEY="base64:$(openssl rand -base64 32)"
+          DB_PASSWORD="$(openssl rand -hex 16)"
+          echo "::add-mask::$APP_KEY"
+          echo "::add-mask::$DB_PASSWORD"
+          cat > .env <<EOF
+          IMAGE_TAG=ci
+          APP_NAME=Pixelforge
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_URL=http://localhost:8081
+          APP_KEY=$APP_KEY
+          LOG_CHANNEL=stderr
+          LOG_LEVEL=info
+          DB_CONNECTION=pgsql
+          DB_HOST=postgres
+          DB_PORT=5432
+          DB_DATABASE=pixelforge
+          DB_USERNAME=pixelforge
+          DB_PASSWORD=$DB_PASSWORD
+          POSTGRES_DB=pixelforge
+          POSTGRES_USER=pixelforge
+          POSTGRES_PASSWORD=$DB_PASSWORD
+          QUEUE_CONNECTION=database
+          CACHE_STORE=database
+          SESSION_DRIVER=database
+          SESSION_SECURE_COOKIE=true
+          PIXELFORGE_API_KEY=dummy-ci-key
+          PIXELFORGE_WEBHOOK_SECRET=dummy-ci-secret
+          EOF
+
+      - name: Start Postgres and wait until it is healthy
+        run: |
+          docker compose up -d postgres
+          for i in $(seq 1 60); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q postgres)")
+            echo "postgres: $status"
+            [ "$status" = "healthy" ] && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Run the migrations (one-off, not in the entrypoint)
+        run: docker compose run --rm web php artisan migrate --force
+
+      - name: Start web, worker and scheduler
+        run: docker compose up -d
+
+      - name: Check /up and /login
+        run: |
+          for path in /up /login; do
+            for i in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8081$path" || true)
+              [ "$code" = "200" ] && break
+              sleep 2
+            done
+            echo "$path -> $code"
+            [ "$code" = "200" ] || exit 1
+          done
+
+      - name: Memory use of the containers
+        run: docker stats --no-stream
+
+      - name: Show the logs if something failed
+        if: failure()
+        run: docker compose logs --tail 100
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
+
+      - name: Save the image
+        run: docker save pixelforge-app:ci -o pixelforge-app.tar
+
+      - name: Upload the image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pixelforge-app-image
+          path: pixelforge-app.tar
+          retention-days: 7
