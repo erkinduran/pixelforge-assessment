@@ -37,7 +37,8 @@ RUN npm ci --ignore-scripts && npm run build
 FROM base AS app
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 COPY deploy/php.ini "$PHP_INI_DIR/conf.d/zz-app.ini"
-COPY deploy/Caddyfile /etc/caddy/Caddyfile
+# The image starts FrankenPHP with `--config /etc/frankenphp/Caddyfile`; the /etc/caddy copy is a separate file.
+COPY deploy/Caddyfile /etc/frankenphp/Caddyfile
 COPY --from=vendor /var/www/html /var/www/html
 COPY --from=assets /var/www/html/public/build /var/www/html/public/build
 # Laravel writes to storage/ and bootstrap/cache/; Caddy writes to /data and /config. Run as www-data
