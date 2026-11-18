@@ -5,7 +5,7 @@ namespace Tests\Unit\Pricing;
 use App\Pricing\Rates;
 use App\Pricing\TokenTable;
 
-/** The GET /v1/pricing example response from docs/pixelforge-api.md, copied as a JSON file. */
+/** The GET /v1/pricing example response from the Pixelforge docs ("Pricing and token usage"), copied as a JSON file. */
 trait PricingFixture
 {
     /** @return array<string, mixed> */

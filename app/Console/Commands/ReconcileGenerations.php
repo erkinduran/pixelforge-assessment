@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * The fallback for webhooks that never came and jobs that never finished (CLAUDE.md, decision 8).
+ * The fallback for webhooks that never came and jobs that never finished.
  * It never writes `failed` itself: a GET error, a timeout or an unknown answer is logged and the
  * row is left alone. Only a Pixelforge object, passed through the one apply() function, changes a row.
  *

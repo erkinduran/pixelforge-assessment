@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Receives Pixelforge webhooks. Delivery is at least once and in any order (docs L496-499),
+ * Receives Pixelforge webhooks. Delivery is at least once and in any order (Pixelforge docs, Webhooks section, "Responding and retries"),
  * so every event is checked for a valid signature, recorded once, and then applied.
  */
 final class PixelforgeWebhookController
@@ -98,8 +98,8 @@ final class PixelforgeWebhookController
     }
 
     /**
-     * The header looks like "t=<unix time>,v1=<hex hmac>"; the hmac is over "<t>.<raw body>" (docs L451-458).
-     * Parsed like the docs' example (L466-473): key=value pairs, any order, unknown keys ignored.
+     * The header looks like "t=<unix time>,v1=<hex hmac>"; the hmac is over "<t>.<raw body>" (Pixelforge docs, Webhooks section, "Verifying signatures").
+     * Parsed like the docs' example in "Verifying signatures": key=value pairs, any order, unknown keys ignored.
      */
     private function signatureIsValid(string $rawBody, string $header, string $secret): bool
     {

@@ -20,8 +20,8 @@ use Throwable;
  * retry can never create a second generation. What to do after a failure is decided by
  * SubmitPolicy; this class only carries it out.
  *
- * A row that is left queued with no pixelforge_id is picked up by the fallback poller (later
- * ticket), which dispatches this job again: same key, same body. A row that has a pixelforge_id
+ * A row that is left queued with no pixelforge_id is picked up by the reconcile command
+ * (pixelforge:reconcile), which dispatches this job again: same key, same body. A row that has a pixelforge_id
  * is polled with GET /generations/{id} instead. There is no "stuck" status.
  */
 class SubmitGeneration implements ShouldBeUnique, ShouldQueue

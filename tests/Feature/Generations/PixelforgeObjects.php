@@ -7,10 +7,10 @@ use App\Models\Generation;
 /**
  * Pixelforge generation objects for tests.
  *
- * queued.json and succeeded.json are copied from the docs' examples (docs/pixelforge-api.md L144, L222).
+ * queued.json and succeeded.json are copied from the docs' examples (Pixelforge docs: the "Create a generation" and "The generation object" examples).
  * The processing and failed objects are COMPOSED from those two: the docs show no processing example
- * and only the `error` fragment of a failed one (L258). The docs' metadata has no local_id, so each
- * object gets the id of our row, as the real submit job will send it.
+ * and only the `error` fragment of a failed one (Pixelforge docs, "Lifecycle"). The docs' metadata has no local_id, so each
+ * object gets the id of our row, as the real submit job sends it.
  */
 trait PixelforgeObjects
 {

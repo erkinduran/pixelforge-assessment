@@ -40,7 +40,7 @@ return new class extends Migration
             $table->integer('usage_output')->nullable();
             $table->integer('usage_reasoning')->nullable();
 
-            // The image URL is long (signed), so text. The expiry is Pixelforge's value (L516).
+            // The image URL is long (signed), so text. The expiry is Pixelforge's value (Pixelforge docs, "Images").
             $table->text('image_url')->nullable();
             $table->timestampTz('image_url_expires_at')->nullable();
 

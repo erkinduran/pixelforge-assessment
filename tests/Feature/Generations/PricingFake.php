@@ -5,7 +5,7 @@ namespace Tests\Feature\Generations;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
-/** The docs' GET /v1/pricing answer (docs/pixelforge-api.md, "Pricing and token usage"). */
+/** The docs' GET /v1/pricing answer (Pixelforge docs, "Pricing and token usage"). */
 trait PricingFake
 {
     /** @return array<string, mixed> */

@@ -33,7 +33,7 @@ class PixelforgeWebhookTest extends TestCase
     // --- helpers ---
 
     /**
-     * An event shaped like the docs' example (L428-441).
+     * An event shaped like the docs' example in the Webhooks section.
      *
      * @param  array<string, mixed>  $object
      * @return array<string, mixed>

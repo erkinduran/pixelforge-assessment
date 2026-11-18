@@ -7,7 +7,7 @@ use App\Pixelforge\PixelforgeException;
 use Carbon\CarbonInterface;
 
 /**
- * What to do after a failed POST /generations (CLAUDE.md, decision 6). Pure: no database,
+ * What to do after a failed POST /generations. Pure: no database,
  * no queue, no clock of its own, so it can be tested as a table.
  */
 final class SubmitPolicy
