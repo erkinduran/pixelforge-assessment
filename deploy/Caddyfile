@@ -1,0 +1,14 @@
+{
+	# TLS is done by nginx on the host; this server only speaks plain http inside the container.
+	auto_https off
+	admin off
+	frankenphp {
+		num_threads 2
+	}
+}
+
+:8080 {
+	root * /var/www/html/public
+	encode zstd gzip
+	php_server
+}

@@ -1,0 +1,71 @@
+# Production stack. Everything secret is in .env next to this file, written by hand on the
+# server; it is never in the image and never in git. IMAGE_TAG is read from the same file.
+name: pixelforge
+
+x-app: &app
+    image: pixelforge-app:${IMAGE_TAG:?set IMAGE_TAG in .env}
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+        postgres:
+            condition: service_healthy
+
+services:
+    web:
+        <<: *app
+        # Published on the host's loopback only: host nginx proxies to it, nothing else can reach it.
+        ports:
+            - '127.0.0.1:8081:8080'
+        mem_limit: 256m
+        memswap_limit: 256m # equal to mem_limit: no swap
+        healthcheck:
+            test:
+                - CMD
+                - php
+                - -r
+                - "exit(@file_get_contents('http://127.0.0.1:8080/up') === false ? 1 : 0);"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 20s
+
+    worker:
+        <<: *app
+        # The submit job limits itself with retryUntil(), so --tries does not matter. --max-time
+        # makes the worker exit hourly; restart: unless-stopped brings it back with fresh memory.
+        command: php artisan queue:work --sleep=1 --tries=1 --max-time=3600
+        mem_limit: 192m
+        memswap_limit: 192m
+
+    scheduler:
+        <<: *app
+        # Runs `pixelforge:reconcile` every minute (routes/console.php).
+        command: php artisan schedule:work
+        mem_limit: 128m
+        memswap_limit: 128m
+
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        # No published port: only the other containers reach it, by the name "postgres".
+        # Values come from .env at the compose level, so the database container does not get the app's secrets.
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+            POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}',
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        mem_limit: 256m
+        memswap_limit: 256m
+
+volumes:
+    pgdata:
