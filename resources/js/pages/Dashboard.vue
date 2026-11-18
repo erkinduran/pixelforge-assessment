@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
+import { create, index } from '@/routes/generations';
 
 defineOptions({
     layout: {
@@ -21,6 +23,14 @@ defineOptions({
     <div
         class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
     >
+        <div class="flex flex-wrap gap-3">
+            <Button as-child>
+                <Link :href="create()">Generate an image</Link>
+            </Button>
+            <Button variant="outline" as-child>
+                <Link :href="index()">View history</Link>
+            </Button>
+        </div>
         <div class="grid auto-rows-min gap-4 md:grid-cols-3">
             <div
                 class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border"

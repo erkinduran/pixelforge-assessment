@@ -13,6 +13,10 @@ use Illuminate\Support\Facades\Http;
  */
 class PixelforgeClient
 {
+    public const PRICING_TIMEOUT_SECONDS = 3;
+
+    public const PRICING_CONNECT_TIMEOUT_SECONDS = 2;
+
     /**
      * POST /generations. Pass the same $idempotencyKey on every retry of the same generation.
      *
@@ -51,16 +55,26 @@ class PixelforgeClient
      */
     public function pricing(): array
     {
-        return $this->decode($this->send(fn (PendingRequest $request) => $request->get('/pricing'), withToken: false));
+        // Short timeouts: the generate form asks for pricing while the user types. An outage must
+        // not hold a PHP worker for the 15 s a create call may take.
+        return $this->decode($this->send(
+            fn (PendingRequest $request) => $request->get('/pricing'),
+            withToken: false,
+            timeout: self::PRICING_TIMEOUT_SECONDS,
+            connectTimeout: self::PRICING_CONNECT_TIMEOUT_SECONDS,
+        ));
     }
 
-    /** @param  callable(PendingRequest): Response  $call */
-    private function send(callable $call, bool $withToken = true): Response
+    /**
+     * @param  callable(PendingRequest): Response  $call
+     * @param  int|null  $timeout  Total seconds; null = the configured one.
+     */
+    private function send(callable $call, bool $withToken = true, ?int $timeout = null, int $connectTimeout = 5): Response
     {
         $request = Http::baseUrl(config('services.pixelforge.base_url'))
             ->acceptJson()
-            ->connectTimeout(5)
-            ->timeout(config('services.pixelforge.timeout'));
+            ->connectTimeout($connectTimeout)
+            ->timeout($timeout ?? config('services.pixelforge.timeout'));
 
         if ($withToken) {
             $request = $request->withToken((string) config('services.pixelforge.key'));

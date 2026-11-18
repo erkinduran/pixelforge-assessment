@@ -56,6 +56,29 @@ final class TokenTable
         );
     }
 
+    /**
+     * The qualities Pixelforge prices. The form and the validation use this, so they cannot
+     * offer something the estimator would reject.
+     *
+     * @return list<string>
+     */
+    public function qualities(): array
+    {
+        return array_map('strval', array_keys($this->output));
+    }
+
+    /**
+     * Sizes that have an output token count for EVERY quality (an unpriced combination cannot be estimated).
+     *
+     * @return list<string>
+     */
+    public function sizes(): array
+    {
+        $perQuality = array_map(fn (array $sizes) => array_map('strval', array_keys($sizes)), array_values($this->output));
+
+        return $perQuality === [] ? [] : array_values(array_intersect(...$perQuality));
+    }
+
     public function outputTokens(string $quality, string $size): int
     {
         return $this->output[$quality][$size]

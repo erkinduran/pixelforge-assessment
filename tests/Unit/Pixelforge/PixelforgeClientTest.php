@@ -49,6 +49,35 @@ class PixelforgeClientTest extends TestCase
         $this->assertSame('processing', $result['generation']['status']);
     }
 
+    public function test_pricing_uses_short_timeouts_and_create_keeps_the_long_ones(): void
+    {
+        $seen = [];
+        Http::fake(function (Request $request, array $options) use (&$seen) {
+            $seen[] = [$request->method(), $options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+            return Http::response($this->generation(), 202);
+        });
+
+        $client = new PixelforgeClient;
+        $client->pricing();
+        $client->createGeneration(['prompt' => 'x'], 'key-1');
+
+        // A Pixelforge outage must not hold a PHP worker for the 15 s a create call may take.
+        $this->assertSame([['GET', 3, 2], ['POST', 15, 5]], $seen);
+    }
+
+    public function test_a_pricing_timeout_is_a_pixelforge_exception_with_no_status(): void
+    {
+        Http::fake(['*/pricing' => fn () => throw new ConnectionException('cURL error 28: timed out')]);
+
+        try {
+            (new PixelforgeClient)->pricing();
+            $this->fail('should have thrown');
+        } catch (PixelforgeException $e) {
+            $this->assertNull($e->status);
+        }
+    }
+
     public function test_get_generation_requests_the_id_with_auth(): void
     {
         Http::fake(['*/generations/gen_TEST' => Http::response($this->generation('succeeded'), 200)]);
