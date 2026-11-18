@@ -38,6 +38,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $completed_at
  * @property string|null $failure_code
  * @property string|null $failure_message
+ * @property Carbon|null $unknown_outcome_at
+ * @property int $submit_attempts
+ * @property string|null $last_submit_error
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Charge|null $charge
@@ -76,6 +79,8 @@ class Generation extends Model
             'usage_reasoning' => 'integer',
             'image_url_expires_at' => 'datetime',
             'completed_at' => 'datetime',
+            'unknown_outcome_at' => 'datetime',
+            'submit_attempts' => 'integer',
         ];
     }
 
