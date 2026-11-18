@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, Clock, FolderGit2, LayoutGrid, Sparkles } from '@lucide/vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+import {
+    BookOpen,
+    ChartColumn,
+    Clock,
+    FolderGit2,
+    LayoutGrid,
+    Sparkles,
+} from '@lucide/vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -15,10 +23,11 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { report } from '@/routes/admin';
 import { create, index } from '@/routes/generations';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -35,6 +44,17 @@ const mainNavItems: NavItem[] = [
         icon: Clock,
     },
 ];
+
+// The link is only a convenience: the route itself answers 403 to everyone but admins.
+const page = usePage();
+const mainNavItems = computed<NavItem[]>(() =>
+    page.props.auth.user.is_admin === true
+        ? [
+              ...baseNavItems,
+              { title: 'Report', href: report(), icon: ChartColumn },
+          ]
+        : baseNavItems,
+);
 
 const footerNavItems: NavItem[] = [
     {

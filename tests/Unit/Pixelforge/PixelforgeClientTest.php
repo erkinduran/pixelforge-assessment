@@ -95,6 +95,34 @@ class PixelforgeClientTest extends TestCase
         Http::assertSent(fn (Request $request) => $request->method() === 'GET' && $request->hasHeader('Authorization'));
     }
 
+    public function test_usage_sends_the_range_with_auth_and_the_short_timeouts(): void
+    {
+        $seen = [];
+        Http::fake(function (Request $request, array $options) use (&$seen) {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+            $seen = [$request->method(), $query, $request->hasHeader('Authorization'), $options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+            return Http::response(['object' => 'usage', 'data' => [], 'total' => []], 200);
+        });
+
+        $usage = (new PixelforgeClient)->usage('2026-11-01', '2026-11-02');
+
+        $this->assertSame('usage', $usage['object']);
+        $this->assertSame(['GET', ['start_date' => '2026-11-01', 'end_date' => '2026-11-02'], true, 3, 2], $seen);
+    }
+
+    public function test_usage_errors_are_pixelforge_exceptions(): void
+    {
+        Http::fake(['*/usage*' => Http::response(['error' => ['code' => 'date_range_too_long', 'message' => 'x']], 422)]);
+
+        try {
+            (new PixelforgeClient)->usage('2020-01-01', '2026-01-01');
+            $this->fail('should have thrown');
+        } catch (PixelforgeException $e) {
+            $this->assertSame('date_range_too_long', $e->errorCode);
+        }
+    }
+
     public function test_get_generation_requests_the_id_with_auth(): void
     {
         Http::fake(['*/generations/gen_TEST' => Http::response($this->generation('succeeded'), 200)]);

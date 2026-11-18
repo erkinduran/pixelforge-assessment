@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AdminReportController;
 use App\Http\Controllers\GenerationController;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'Welcome')->name('home');
@@ -15,6 +17,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('generations/pending', [GenerationController::class, 'pending'])->name('generations.pending');
     Route::post('generations', [GenerationController::class, 'store'])->middleware('throttle:20,1')->name('generations.store');
     Route::get('generations/{generation}', [GenerationController::class, 'show'])->whereUuid('generation')->name('generations.show');
+
+    Route::get('admin/report', AdminReportController::class)->middleware(EnsureUserIsAdmin::class)->name('admin.report');
 });
 
 require __DIR__.'/settings.php';

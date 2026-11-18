@@ -62,6 +62,21 @@ class PixelforgeClient
     }
 
     /**
+     * GET /usage: what Pixelforge billed this key per UTC day (docs: at most 92 days, inclusive).
+     * The admin report reconciles against it. Short timeouts, like pricing: it is read while a page loads.
+     *
+     * @return array<string, mixed>
+     */
+    public function usage(string $startDate, string $endDate): array
+    {
+        return $this->decode($this->send(
+            fn (PendingRequest $request) => $request->get('/usage', ['start_date' => $startDate, 'end_date' => $endDate]),
+            timeout: self::PRICING_TIMEOUT_SECONDS,
+            connectTimeout: self::PRICING_CONNECT_TIMEOUT_SECONDS,
+        ));
+    }
+
+    /**
      * GET /pricing. Docs: needs no authentication, so the bearer token is not sent.
      *
      * @return array<string, mixed>

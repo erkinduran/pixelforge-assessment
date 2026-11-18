@@ -36,6 +36,12 @@ class UserFactory extends Factory
         ];
     }
 
+    /** An admin (the column is not mass-assignable; factories bypass that). */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_admin' => true]);
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */
