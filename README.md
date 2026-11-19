@@ -100,7 +100,7 @@ Stored as integers: 305,510,000,000 and 381,887,500,000 picodollars.
     | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
     | `concurrency_limit_exceeded`                                                      | Wait for `Retry-After` and try again, for up to ten minutes. Waiting does not use attempts.                                                                                                                                                                                                                                                |
     | `rate_limit_exceeded`, `overloaded`, any other 429, timeouts, 5xx                 | Retry with growing backoff (2, 4, 8, 16 seconds, or `Retry-After` if longer), five attempts at most. After that the row is failed with a clear message only if no attempt (this one included) had an unknown outcome; timeouts and 5xx other than `overloaded` therefore never fail the row, which stays queued for the reconcile command. |
-    | `daily_limit_exceeded`, 400 (including `content_policy_violation`), 401, 404, 422 | Failed at once with a readable message. The raw provider text goes to the log only.                                                                                                                                                                                                                                                        |
+    | `daily_limit_exceeded`, 400 (including `content_policy_violation`), 401, 404, 422, any other 4xx except 409 and 429 | Failed at once with a readable message, but only if no earlier attempt for that row had an unknown outcome; otherwise the row stays queued and the reconcile command re-sends it every five minutes (same key, same body) until a Pixelforge object finishes it. The raw provider text goes to the log only. |
     | 409                                                                               | Never re-sent. The row stays queued; the reconcile command or its webhook finishes it.                                                                                                                                                                                                                                                     |
 
 - **Idempotency.** The row's uuid is sent as the `Idempotency-Key` and as `metadata.local_id`. The body is rebuilt from the row on every attempt, so it is identical each time (a changed body under the same key would be a 409). `SubmitGeneration` is unique per generation, so only one job per row is alive.
@@ -146,11 +146,13 @@ The two sides only match for one API key: use a key whose generations all come f
 ## Known limits
 
 - Rates with more than four significant decimals throw; the generation stays non-final (even a failed generation with such rates).
-- Prompts are kept after account deletion (they are product data, and the money records must stay).
+- Prompts are kept after account deletion. This is a product decision, and prompts may contain personal data.
 - Open registration on a public URL lets anyone spend the account's shared daily quota.
 - A 409 row older than the newest 300 generations waits for its webhook (the list search only covers three pages of 100).
 - `apply_failed` rows stop being re-sent after 24 hours.
+- A definite rejection (e.g. 400) after an earlier unknown outcome leaves the row queued; the reconcile command keeps re-sending it every five minutes with no time cap, which uses part of the shared 60/min.
 - No password-reset email is sent (`MAIL_MAILER=log`).
+- PHPStan runs with a 1G memory limit (CI runs it via `composer test`) and may crash locally when the project path contains non-ASCII characters.
 - The row lock is tested by the shape of the SQL, not by a real race. The unique indexes (`charges.generation_id`, `webhook_events.event_id`) are the last guard.
 
 ## Deploy
@@ -169,6 +171,8 @@ docker compose up -d postgres
 docker compose run --rm web php artisan migrate --force   # migrations are a one-off step, not part of start-up
 docker compose up -d
 ```
+
+The commands above assume one machine. On the real deployment the image is built off the server (`--platform linux/amd64`) and moved with `docker save | ssh … docker load`; the host never builds or pulls (`pull_policy: never` in `compose.yaml`).
 
 `.env` sits next to `compose.yaml` and holds `IMAGE_TAG`, the app key, database values and the Pixelforge key and webhook secret of that deployment. It is never part of the image. After changing it, run `docker compose up -d` again (it recreates the containers); a plain restart does not re-read it. Container memory limits are set in `compose.yaml`.
 
